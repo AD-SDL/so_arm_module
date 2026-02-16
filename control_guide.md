@@ -8,7 +8,6 @@
 5. [Data Collection](#data-collection)
 6. [Training](#training)
 7. [Deployment](#deployment)
-8. [Best Practices](#best-practices)
 
 ---
 
@@ -447,44 +446,6 @@ lerobot-record \
 
 ---
 
-## Best Practices
-
-### Workspace Setup
-- Use a clean, uncluttered table surface
-- Mark object positions with small tape markers
-- Keep workspace well-lit
-- Remove unnecessary objects from camera view
-
-### Safety
-- Always have clear access to power switches
-- Start with slow, cautious movements
-- Test in open space first
-- Never leave robot running unattended during initial testing
-
-### Data Quality
-- Aim for consistency over quantity initially
-- Record in batches (25-50 episodes per session)
-- Review footage to ensure quality
-- Re-record failed episodes immediately
-
-### Iteration Strategy
-1. Start simple: Fixed target, varied object positions
-2. Achieve 80%+ success
-3. Then add complexity: Object rotation, target variation
-4. Continue iterating with more data
-
-### File Management
-```bash
-# Backup important data
-mkdir -p ~/humanoids/backup
-
-# Backup dataset
-cp -r ~/.cache/huggingface/lerobot/local/my_dataset ~/humanoids/backup/
-
-# Backup trained model
-cp -r ./outputs/my_training ~/humanoids/backup/
-```
-
 ### Common Issues
 
 **Issue: Follower arm not responding**
@@ -575,19 +536,3 @@ lerobot-record [robot and camera params] \
 ```
 
 ---
-
-## Troubleshooting Reference
-
-| Issue | Solution |
-|-------|----------|
-| Permission denied /dev/ttyACM | `sudo chmod 666 /dev/ttyACM*` |
-| Calibration magnitude error | Move joints to mid-range before starting |
-| Communication error | Power cycle arm (unplug USB + power, wait, reconnect) |
-| Camera not found | Check USB, verify serial with lerobot-find-cameras |
-| Robot doesn't move | Check calibration loaded, verify port numbers |
-| Poor success rate | Collect more data, verify camera position matches training |
-| Training loss not decreasing | Check data quality, increase steps, more episodes |
-
----
-
-*End of Guide*
