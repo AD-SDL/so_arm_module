@@ -1,3 +1,5 @@
+# flake8: noqa
+
 """Interface for controlling the python_template device/instrument/robot."""
 
 from pathlib import Path
@@ -20,17 +22,12 @@ class Interface:
 
     def __init__():
         """Initialize the interface"""
-        pass
 
     def __del__():
         """Disconnect/cleanup interface"""
-        pass
 
     def run_protocol(path: Path):
         """Run a protocol file"""
-        pass
-
 
     def query_state(state: State):
         """Update the state by querying the device"""
-        pass

@@ -1,13 +1,16 @@
+# flake8: noqa
+
 """
 REST-based node that interfaces with WEI and provides a simple Sleep(t) function
 """
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Annotated
 
+import python_template_interface as interface
 from fastapi.datastructures import UploadFile
 from starlette.datastructures import State
-from typing_extensions import Annotated
 from wei.modules.rest_module import RESTModule
 from wei.types.module_types import (
     LocalFileModuleActionResult,
@@ -24,8 +27,6 @@ from wei.types.step_types import (
 )
 from wei.utils import extract_version
 
-import python_template_interface as interface
-
 python_template_module = RESTModule(
     name="python_template_module",
     version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
@@ -33,9 +34,9 @@ python_template_module = RESTModule(
     model="TODO: specify the device model this module controls",
 )
 
-#***********#
-#*Lifecycle*#
-#***********#
+# ***********#
+# *Lifecycle*#
+# ***********#
 
 # TODO: Define any custom functionality needed to handle the startup, shutdown, and state of the device
 # * All of these functions are optional, and can be removed if not needed
@@ -77,12 +78,12 @@ def custom_state_handler(state: State) -> ModuleState:
     """
 
     # if state.interface:
-        # state.interface.query_state(state)  # *Query the state of the device, if supported
+    # state.interface.query_state(state)  # *Query the state of the device, if supported
 
     return ModuleState.model_validate(
         {
             "status": state.status,  # *Required, Dict[ModuleStatus, bool]
-            "error": state.error, # * Optional, str
+            "error": state.error,  # * Optional, str
             # *Custom state fields
             "sum": state.sum,
             "difference": state.difference,
@@ -90,9 +91,9 @@ def custom_state_handler(state: State) -> ModuleState:
     )
 
 
-#*********#
-#*Actions*#
-#*********#
+# *********#
+# *Actions*#
+# *********#
 
 # TODO: Define functions to handle each action the device should be able to perform
 
@@ -100,13 +101,8 @@ def custom_state_handler(state: State) -> ModuleState:
 @python_template_module.action(
     name="add",
     description="An example action that adds two numbers together.",
-    #* Optionally, you can annotate the values returned by the action, if any
-    results=[
-        ValueModuleActionResult(
-            label="sum",
-            description="The sum of a and b"
-        )
-    ]
+    # * Optionally, you can annotate the values returned by the action, if any
+    results=[ValueModuleActionResult(label="sum", description="The sum of a and b")],
 )
 def add(
     a: Annotated[float, "First number to add"],
@@ -136,7 +132,7 @@ def add(
     results=[
         ValueModuleActionResult(
             label="difference",
-            description="The difference between a and b (and optionally c)"
+            description="The difference between a and b (and optionally c)",
         )
     ]
 )
@@ -177,7 +173,7 @@ def subtract(
             label="output_file",
             description="The output file from the protocol",
         )
-    ]
+    ],
 )
 def run_protocol(
     protocol: Annotated[UploadFile, "Protocol file to run"],
@@ -231,9 +227,9 @@ python_template_module.actions.append(
     )
 )
 
-#****************#
-#*Admin Commands*#
-#****************#
+# ****************#
+# *Admin Commands*#
+# ****************#
 
 # TODO: Add support for admin commands, if desired
 
