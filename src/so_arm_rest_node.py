@@ -1,281 +1,326 @@
-# flake8: noqa
+#!/usr/bin/env python3
+"""REST node for the SO-Arm robot (LeRobot-based).
 
-"""
-REST-based node that interfaces with WEI and provides a simple Sleep(t) function
-"""
+Example moveJ call:
 
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import Annotated
+    from madsci.client.node.rest_node_client import RestNodeClient
+    from madsci.common.types.action_types import ActionRequest
+    from madsci.common.types.location_types import LocationArgument
 
-import python_template_interface as interface
-from fastapi.datastructures import UploadFile
-from starlette.datastructures import State
-from wei.modules.rest_module import RESTModule
-from wei.types.module_types import (
-    LocalFileModuleActionResult,
-    ModuleAction,
-    ModuleActionArg,
-    ModuleState,
-    ValueModuleActionResult,
-)
-from wei.types.step_types import (
-    ActionRequest,
-    StepFileResponse,
-    StepResponse,
-    StepStatus,
-)
-from wei.utils import extract_version
+    client = RestNodeClient(url="http://localhost:3000")
 
-python_template_module = RESTModule(
-    name="python_template_module",
-    version=extract_version(Path(__file__).parent.parent / "pyproject.toml"),
-    description="TODO: Provide a description of your module here.",
-    model="TODO: specify the device model this module controls",
-)
-
-# ***********#
-# *Lifecycle*#
-# ***********#
-
-# TODO: Define any custom functionality needed to handle the startup, shutdown, and state of the device
-# * All of these functions are optional, and can be removed if not needed
-
-
-@python_template_module.startup()
-def custom_startup_handler(state: State):
-    """
-    Custom startup handler that is called whenever the module is started.
-
-    If this isn't provided, the default startup handler will be used, which will do nothing.
-    """
-    state.sum = 0
-    state.difference = 0
-    state.interface = None
-
-    # state.interface = interface.Interface()  # *Initialize the device, if needed
-
-
-@python_template_module.shutdown()
-def custom_shutdown_handler(state: State):
-    """
-    Custom shutdown handler that is called whenever the module is shutdown.
-
-    If this isn't provided, the default shutdown handler will be used, which will do nothing.
-    """
-
-    # del state.interface  # *Close device connection or do other cleanup, if needed
-
-
-@python_template_module.state_handler()
-def custom_state_handler(state: State) -> ModuleState:
-    """
-    Custom state handler that is called whenever the modules state is requested via the REST API.
-
-    If this isn't provided, the default state handler will be used, which will return the following:
-
-    ModuleState(status=state.status, error=state.error)
-    """
-
-    # if state.interface:
-    # state.interface.query_state(state)  # *Query the state of the device, if supported
-
-    return ModuleState.model_validate(
-        {
-            "status": state.status,  # *Required, Dict[ModuleStatus, bool]
-            "error": state.error,  # * Optional, str
-            # *Custom state fields
-            "sum": state.sum,
-            "difference": state.difference,
-        }
-    )
-
-
-# *********#
-# *Actions*#
-# *********#
-
-# TODO: Define functions to handle each action the device should be able to perform
-
-
-@python_template_module.action(
-    name="add",
-    description="An example action that adds two numbers together.",
-    # * Optionally, you can annotate the values returned by the action, if any
-    results=[ValueModuleActionResult(label="sum", description="The sum of a and b")],
-)
-def add(
-    a: Annotated[float, "First number to add"],
-    b: Annotated[float, "Second number to add"],
-    state: State,  # *This is an optional argument that can be used to access the current state of the module
-) -> StepResponse:
-    """
-    Add two numbers together
-
-    Example workflow step yaml:
-
-    - name: Add on python_template
-      module: python_template
-      action: add
-      args:
-        a: 5
-        b: 7
-    """
-
-    state.sum = a + b
-
-    return StepResponse.step_succeeded(data={"sum": state.sum})
-
-
-# * If you don't specify a name or description, the function name and docstring will be used
-@python_template_module.action(
-    results=[
-        ValueModuleActionResult(
-            label="difference",
-            description="The difference between a and b (and optionally c)",
-        )
-    ]
-)
-def subtract(
-    a: Annotated[float, "First number to subtract from"],
-    b: Annotated[float, "Second number to subtract"],
-    action: ActionRequest,  # *This is an optional argument that can be used to access the entire action request
-    state: State,  # *This is an optional argument that can be used to access the current state of the module
-) -> StepResponse:
-    """
-    Subtract two numbers
-
-    Example workflow step yaml:
-
-    - name: Subtract on python_template
-      module: python_template
-      action: subtract
-      args:
-        a: 12
-        b: 10
-    """
-
-    state.difference = (
-        action.args["a"] - action.args["b"]
-    )  # *This is equivalent to `state.difference = a - b`
-    state.difference -= action.args.get(
-        "c", 0
-    )  # * You can also use get to provide a default value
-
-    return StepResponse.step_succeeded(data={"difference": state.difference})
-
-
-@python_template_module.action(
-    name="run_protocol",
-    description="Run a protocol file",
-    results=[
-        LocalFileModuleActionResult(
-            label="output_file",
-            description="The output file from the protocol",
-        )
-    ],
-)
-def run_protocol(
-    protocol: Annotated[UploadFile, "Protocol file to run"],
-) -> StepFileResponse:
-    """
-    Run a protocol file
-
-    Example workflow step yaml:
-
-    - name: Run protocol on python_template
-      module: python_template
-      action: run_protocol
-      files:
-        protocol: path/to/protocol/file
-    """
-    # *Save the protocol file to a temporary location
-    with NamedTemporaryFile() as f:
-        f.write(protocol.file.read())
-        f.seek(0)
-
-        # *Run protocol file
-        interface.run_protocol(Path(f.name))
-
-    output_file = Path("path/to/output/file")
-
-    return StepFileResponse(
-        status=StepStatus.SUCCEEDED,
-        files={
-            "output_file": output_file,
+    request = ActionRequest(
+        action_name="moveJ",
+        args={
+            "location": LocationArgument(
+                location={
+                    "shoulder_pan.pos":  0.48,
+                    "shoulder_lift.pos": -81.45,
+                    "elbow_flex.pos":    74.81,
+                    "wrist_flex.pos":    46.77,
+                    "wrist_roll.pos":    8.66,
+                    "gripper.pos":       0.0,
+                },
+            ).model_dump(mode="json"),
         },
     )
+    client.send_action(request)
+"""
 
+from typing import Annotated, Optional
 
-# * If you don't want to/can't use the decorator, you can also add actions like this:
-def print_func(output: str) -> StepResponse:
-    """
-    Print a message
-    """
-    print(output)
-    return StepResponse.step_succeeded()
+from madsci.common.types.action_types import ActionFailed
+from madsci.common.types.location_types import LocationArgument
+from madsci.common.types.node_types import RestNodeConfig
+from madsci.node_module.helpers import action
+from madsci.node_module.rest_node_module import RestNode
 
-
-python_template_module.actions.append(
-    ModuleAction(
-        name="print",
-        description="A simple print action",
-        function=print_func,
-        args=[
-            ModuleActionArg(name="output", type="str", description="Message to print")
-        ],
-    )
+from so_arm_interface.so_arm_interface import (
+    NotConnectedError,
+    PolicyModeError,
+    PolicyNotLoadedError,
+    SOArmInterface,
 )
 
-# ****************#
-# *Admin Commands*#
-# ****************#
 
-# TODO: Add support for admin commands, if desired
+class SOArmNodeConfig(RestNodeConfig):
+    """Configuration for the SO-Arm node."""
 
-"""
-To add support for custom admin actions, uncomment one or more of the
-functions below.
-By default, a module supports SHUTDOWN, RESET, LOCK, and UNLOCK modules. This can be overridden by using the decorators below, or setting a custom Set for python_rest_module.admin_commands
-"""
+    robot_port: str = "/dev/ttyACM0"
+    """Serial port for the SO-Arm follower."""
 
-# @python_template_module.pause
-# def pause(state: State):
-#     """Support pausing actions on this module"""
-#     pass
+    camera_serial: str = "327122076093"
+    """RealSense camera serial number or name."""
 
-# @python_template_module.resume
-# def resume(state: State):
-#     """Support resuming actions on this module"""
-#     pass
+    default_episode_length: float = 15.0
+    """Default episode duration in seconds."""
 
-# @python_template_module.cancel
-# def cancel(state: State):
-#     """Support cancelling actions on this module"""
-#     pass
-
-# @python_template_module.lock
-# def lock(state: State):
-#     """Support locking the module to prevent new actions from being accepted"""
-#     pass
-
-# @python_template_module.unlock
-# def unlock(state: State):
-#     """Support unlocking the module to allow new actions to be accepted"""
-#     pass
-
-# @python_template_module.reset
-# def reset(state: State):
-#     """Support resetting the module.
-#     This should clear errors and reconnect to/reinitialize the device, if possible"""
-#     pass
-
-# @python_template_module.shutdown
-# def shutdown(state: State):
-#     """Support shutting down the module"""
-#     pass
+    control_fps: int = 60
+    """Control loop frequency in Hz."""
 
 
-# *This runs the arg_parser, startup lifecycle method, and starts the REST server
+class SOArmNode(RestNode):
+    """MADSci REST node for the SO-Arm robot."""
+
+    robot: Optional[SOArmInterface] = None
+    config: SOArmNodeConfig = SOArmNodeConfig()
+    config_model = SOArmNodeConfig
+
+    # ------------------------------------------------------------------
+    # Lifecycle handlers
+    # ------------------------------------------------------------------
+
+    def startup_handler(self) -> None:
+        """Connect to the robot."""
+        self.robot = SOArmInterface(
+            robot_port=self.config.robot_port,
+            camera_serial=self.config.camera_serial,
+            control_fps=self.config.control_fps,
+        )
+        self.robot.connect()
+        self.logger.log_info("SOArm node initialized.")
+
+    def shutdown_handler(self) -> None:
+        """Disconnect the robot cleanly."""
+        try:
+            if self.robot is not None:
+                self.robot.disconnect()
+                self.robot = None
+        except Exception as err:
+            self.logger.log_error(f"Error during shutdown: {err}")
+
+    def state_handler(self) -> None:
+        """
+        Periodically update node state with current joint positions.
+        Backs off silently during policy execution to avoid port contention.
+        """
+        if self.robot is None:
+            return
+
+        if self.robot.mode.value == "policy":
+            self.node_state["mode"] = "policy"
+            return
+
+        try:
+            joint_state = self.robot.getJ()
+            self.node_state = {
+                "mode": "manual",
+                "joint_positions": joint_state,
+                "policy_loaded": self.robot.policy_loaded,
+                "policy_path": self.robot.policy_path,
+            }
+        except (PolicyModeError, NotConnectedError):
+            pass
+        except Exception as err:
+            self.logger.log_error(f"state_handler error: {err}")
+
+    # ------------------------------------------------------------------
+    # Actions — manual mode
+    # ------------------------------------------------------------------
+
+    @action(name="getJ", description="Read current joint positions from the SO-Arm.")
+    def getJ(self) -> dict:  # noqa: N802
+        """Return current joint positions keyed by joint name."""
+        try:
+            return self.robot.getJ()
+        except (PolicyModeError, NotConnectedError) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"getJ failed: {err}"])
+
+    @action(
+        name="home",
+        description="Move all joints to zero. Blocks until arm arrives or timeout.",
+    )
+    def home(
+        self,
+        timeout: Annotated[float, "Max seconds to wait before returning."] = 10.0,
+    ) -> Optional[ActionFailed]:
+        """Move all joints to zero. Arm keeps holding after return."""
+        try:
+            self.robot.home(timeout=timeout)
+            return None
+        except NotConnectedError as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"home failed: {err}"])
+
+    @action(name="moveJ", description="Move SO-Arm to a target joint configuration.")
+    def moveJ(  # noqa: N802
+        self,
+        location: Annotated[
+            LocationArgument,
+            "Target joint positions as a LocationArgument. "
+            "location field should be a dict mapping joint names to positions in degrees: "
+            "{shoulder_pan.pos, shoulder_lift.pos, elbow_flex.pos, wrist_flex.pos, wrist_roll.pos, gripper.pos}.",
+        ],
+        timeout: Annotated[float, "Max seconds to wait before returning."] = 10.0,
+        tolerance: Annotated[float, "Per-joint arrival threshold in degrees."] = 3.0,
+    ) -> Optional[ActionFailed]:
+        """Move to the target joint configuration. Arm keeps holding after return."""
+        try:
+            self.robot.moveJ(
+                location=location,
+                timeout=timeout,
+                tolerance=tolerance,
+            )
+            return None
+        except (NotConnectedError, ValueError) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"moveJ failed: {err}"])
+
+    # ------------------------------------------------------------------
+    # Actions — policy
+    # ------------------------------------------------------------------
+
+    @action(
+        name="load_policy",
+        description="Load (or reload) an ACT policy from a checkpoint directory.",
+    )
+    def load_policy(
+        self,
+        policy_path: Annotated[
+            str, "Path to the pretrained_model checkpoint directory."
+        ],
+    ) -> Optional[ActionFailed]:
+        """Load policy weights and normalizers. Only available in manual mode."""
+        try:
+            self.robot.load_policy(policy_path)
+            return None
+        except (PolicyModeError, FileNotFoundError) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"load_policy failed: {err}"])
+
+    @action(
+        name="pick_and_place_cube",
+        description="Run the cube-to-bowl pick and place policy for one episode.",
+    )
+    def pick_and_place_cube(
+        self,
+        episode_length: Annotated[
+            Optional[float],
+            "Episode duration in seconds. Defaults to config.default_episode_length.",
+        ] = None,
+    ) -> Optional[ActionFailed]:
+        """Load the cube pick and place policy (if not already loaded) and run one episode."""
+        duration = (
+            episode_length
+            if episode_length is not None
+            else self.config.default_episode_length
+        )
+        try:
+            self.robot.pick_and_place_cube(episode_length=duration)
+            return None
+        except (
+            PolicyModeError,
+            PolicyNotLoadedError,
+            NotConnectedError,
+            FileNotFoundError,
+        ) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"pick_and_place_cube failed: {err}"])
+
+    @action(
+        name="run_task",
+        description="Load a policy from the given path and run one episode.",
+    )
+    def run_task(
+        self,
+        policy_path: Annotated[
+            str, "Path to the pretrained_model checkpoint directory."
+        ],
+        episode_length: Annotated[
+            Optional[float],
+            "Episode duration in seconds. Defaults to config.default_episode_length.",
+        ] = None,
+    ) -> Optional[ActionFailed]:
+        """Load any policy by path and run one episode. Blocking."""
+        duration = (
+            episode_length
+            if episode_length is not None
+            else self.config.default_episode_length
+        )
+        try:
+            self.robot.load_policy(policy_path)
+            self.robot.run_episode(episode_length=duration)
+            return None
+        except (
+            PolicyModeError,
+            PolicyNotLoadedError,
+            NotConnectedError,
+            FileNotFoundError,
+        ) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"run_task failed: {err}"])
+
+    @action(
+        name="run_episode",
+        description="Deploy the already-loaded policy for one episode.",
+    )
+    def run_episode(
+        self,
+        episode_length: Annotated[
+            Optional[float],
+            "Episode duration in seconds. Defaults to config.default_episode_length.",
+        ] = None,
+    ) -> Optional[ActionFailed]:
+        """Run one episode with the currently loaded policy. Blocking."""
+        duration = (
+            episode_length
+            if episode_length is not None
+            else self.config.default_episode_length
+        )
+        try:
+            self.robot.run_episode(episode_length=duration)
+            return None
+        except (PolicyModeError, PolicyNotLoadedError, NotConnectedError) as err:
+            return ActionFailed(errors=[str(err)])
+        except Exception as err:
+            return ActionFailed(errors=[f"run_episode failed: {err}"])
+
+    # ------------------------------------------------------------------
+    # Lifecycle passthrough
+    # ------------------------------------------------------------------
+
+    def pause(self) -> None:
+        """Pause the node, halting action execution."""
+        self.node_status.paused = True
+        return True
+
+    def resume(self) -> None:
+        """Resume the node after a pause."""
+        self.node_status.paused = False
+        return True
+
+    def shutdown(self) -> None:
+        """Shut down the node and disconnect the robot."""
+        self.shutdown_handler()
+        return True
+
+    def reset(self) -> None:
+        """Reset the node to its initial state."""
+        return super().reset()
+
+    def safety_stop(self) -> None:
+        """Emergency stop — disconnect immediately regardless of mode."""
+        self.node_status.stopped = True
+        try:
+            if self.robot is not None:
+                self.robot.disconnect()
+        except Exception as err:
+            self.logger.log_error(f"Error during safety stop: {err}")
+        return True
+
+    def cancel(self) -> None:
+        """Cancel the currently executing action."""
+        self.node_status.cancelled = True
+        return True
+
+
 if __name__ == "__main__":
-    python_template_module.start()
+    node = SOArmNode()
+    node.start_node()
