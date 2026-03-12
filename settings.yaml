@@ -1,3 +1,3 @@
-node_name: test_so_arm
+node_name: so_arm
 node_description: MADSci node for controlling SO Arm 101 robot
 node_module_name: so_arm
